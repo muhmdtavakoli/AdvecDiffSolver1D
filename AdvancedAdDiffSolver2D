@@ -1,0 +1,118 @@
+#include <deal.II/grid/grid_generator.h>
+#include <deal.II/grid/tria.h>
+#include <deal.II/fe/fe_q.h>
+#include <deal.II/dofs/dof_handler.h>
+#include <deal.II/lac/sparse_matrix.h>
+#include <deal.II/lac/vector.h>
+#include <deal.II/numerics/vector_tools.h>
+#include <deal.II/lac/solver_control.h>
+#include <deal.II/lac/solver_bicgstab.h>
+#include <deal.II/lac/precondition.h>
+
+using namespace dealii;
+
+class AdvectionDiffusionSolver2D
+{
+public:
+    // Constructor to set up the grid, finite element space, and other members
+    AdvectionDiffusionSolver2D()
+        : dof_handler(triangulation)
+    {
+        // Grid generation: creating a unit square [0,1] x [0,1]
+        GridGenerator::hyper_cube(triangulation, 0, 1);
+
+        // Refining the grid to increase resolution
+        triangulation.refine_global(5);
+
+        // Setting up the finite element space (FE_Q stands for Lagrange elements)
+        fe = std::make_shared<FE_Q<2>>(1);
+        dof_handler.distribute_dofs(*fe); // Distribute degrees of freedom
+    }
+
+    // Function to assemble the system of equations
+    void assemble_system()
+    {
+        // Initialize the sparse matrix that will hold the system
+        SparsityPattern sparsity_pattern;
+        SparseMatrix<double> system_matrix;
+        Vector<double> rhs;
+
+        // Set up the sparsity pattern to avoid memory waste
+        DynamicSparsityPattern dsp(dof_handler.n_dofs());
+        DoFTools::make_sparsity_pattern(dof_handler, dsp);
+        sparsity_pattern.copy_from(dsp);
+
+        // Reinitialize the matrix and vectors
+        system_matrix.reinit(sparsity_pattern);
+        rhs.reinit(dof_handler.n_dofs());
+
+        // Loop over the finite elements and integrate the advection-diffusion equation
+        for (const auto &cell : dof_handler.active_cell_iterators())
+        {
+            // For each cell, integrate the contributions of the advection and diffusion terms
+            // Here, we would assemble the local matrices and vectors (left and right-hand sides)
+            // For simplicity, details are omitted here, but this is where you would define 
+            // the finite element stiffness matrix and load vector.
+        }
+
+        // Apply boundary conditions to the system matrix
+        apply_boundary_conditions(system_matrix, rhs);
+    }
+
+    // Function to apply boundary conditions (simplified version)
+    void apply_boundary_conditions(SparseMatrix<double> &system_matrix, Vector<double> &rhs)
+    {
+        // Apply Dirichlet boundary conditions to the solution
+        for (const auto &boundary_cell : dof_handler.boundary_cell_iterators())
+        {
+            // Modify system_matrix and rhs to enforce boundary conditions (e.g., u=0 or u=1)
+            // Here we would loop through the boundary faces and apply appropriate boundary conditions
+        }
+    }
+
+    // Function to solve the system using an iterative solver
+    void solve()
+    {
+        // Define the solver control parameters (maximum iterations and tolerance)
+        SolverControl solver_control(1000, 1e-12);
+
+        // Set up the BiCGStab solver
+        SolverBicgstab<> solver(solver_control);
+
+        // Solve the linear system: system_matrix * solution = rhs
+        solver.solve(system_matrix, solution, rhs, PreconditionIdentity());
+    }
+
+    // Function to output the solution
+    void output_solution()
+    {
+        // Post-processing the solution for visualization or further analysis
+        // Here, the solution would typically be written to a file or visualized using 
+        // a plotting library or output method like .vtk or .xdmf formats.
+        std::cout << "Solution has been computed!" << std::endl;
+    }
+
+private:
+    Triangulation<2> triangulation; // The computational grid (2D)
+    std::shared_ptr<FE_Q<2>> fe;   // The finite element space
+    DoFHandler<2> dof_handler;     // Degree of freedom handler
+    SparseMatrix<double> system_matrix; // Matrix holding the system of equations
+    Vector<double> solution;          // Solution vector
+};
+
+int main()
+{
+    // Create the solver object
+    AdvectionDiffusionSolver2D solver;
+
+    // Step 1: Assemble the system
+    solver.assemble_system();
+
+    // Step 2: Solve the system
+    solver.solve();
+
+    // Step 3: Output the solution
+    solver.output_solution();
+
+    return 0;
+}
